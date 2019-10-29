@@ -7,6 +7,7 @@ void encode_vbyte(FILE * in,FILE * out)
 	fseek(in,0L,SEEK_END);
 	
 	const size_t in_size = ftell(in);	
+		
 	rewind(in);
 
 	unsigned char * input_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
@@ -17,7 +18,7 @@ void encode_vbyte(FILE * in,FILE * out)
 	
 	unsigned char * output_arr_p = output_arr;
 
-	if ( fread(input_arr, 1, in_size,in) <= 0 )
+	if ( fread(input_arr,sizeof(unsigned char), in_size,in) <= 0 )
 	{
 		fprintf(stderr,"Error: Failed to read file into dynamically allocated array.");
 	}	
@@ -29,17 +30,21 @@ void encode_vbyte(FILE * in,FILE * out)
 	while ( i < in_size )
 	{
 		delta = *input_arr_p - previous;
-		while ( delta >= (0b1 << 8 ) )
+		
+		while ( delta >= (0b1 << 7 ) )
 		{
-			*output_arr_p++ = (0b1 << 8) + ( delta & (0b1111111) );
+			*output_arr_p++ = (0b1 << 7) + ( delta & (0b01111111) );
 
 			delta >>= 7;	
 
 			delta &= 0b00000001;
 
-			*output_arr_p++ = delta;
-			previous = *input_arr_p++;	
 		}					
+		
+		*output_arr_p++ = delta;
+			
+		previous = *input_arr_p++;	
+
 		i++;
 	}
 	
