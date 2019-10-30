@@ -42,8 +42,6 @@ void encode_byte(FILE * in,FILE * out)
 		}					
 		
 		*output_arr_p++ = delta;
-			
-		previous = *input_arr_p++;	
 
 		i++;
 	}
@@ -63,6 +61,9 @@ void encode_byte(FILE * in,FILE * out)
 		i++;
 	}	
 	
+	free(input_arr);
+
+	free(output_arr);	
 }
 
 void decode_byte(FILE * in,FILE * out)
@@ -114,6 +115,8 @@ void decode_byte(FILE * in,FILE * out)
 
 		i++;
 	}
+
+	free(inputbuf);
 }
 
 int main(int argc,char*argv[])
@@ -150,6 +153,17 @@ int main(int argc,char*argv[])
 	}
 	
 	encode_byte(in,out);
+
+	if ( fclose(out) == EOF )
+	{
+		fprintf(stderr,"Error: Failed to close %s\n",output_name);
+	}		
+	
+	if ( ( out = fopen(output_name,"rb+") ) == NULL )			
+	{
+		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
+	}
+		
 
 	decode_byte(out,output);		
 
