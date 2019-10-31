@@ -75,15 +75,19 @@ void decode_byte(FILE * in,FILE * out)
 
 	const size_t in_size = ftell(in);
 	
-	static unsigned char * inputbuf;
+	static unsigned char * input_arr;
 
-	unsigned char * inputbuf_p = inputbuf;
+	unsigned char * input_arr_p = input_arr;
 	
-	inputbuf_p = (unsigned char *)calloc(in_size,sizeof(unsigned char));
+	input_arr_p = (unsigned char *)calloc(in_size,sizeof(unsigned char));
 
+	unsigned char * output_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
+	
+	unsigned char * output_arr_p = output_arr;
+	
 	rewind(in);	
 
-	if ( fread(inputbuf,sizeof(unsigned char), in_size,in) <= 0 )
+	if ( fread(input_arr,sizeof(unsigned char), in_size,in) <= 0 )
 	{
 		fprintf(stderr,"Error: Failed to read file into dynamically allocated array.");
 	}	
@@ -100,7 +104,7 @@ void decode_byte(FILE * in,FILE * out)
 	{
 		shift = 0;
 
-		b = *inputbuf_p++;
+		b = *input_arr_p++;
 
 		while ( b >= (0b1 << 7) )
 		{
@@ -108,18 +112,32 @@ void decode_byte(FILE * in,FILE * out)
 
 			shift += 7;
 
-			b = *inputbuf_p++;
+			b = *input_arr_p++;
 		}			
 
 		current += (b << shift);
-
-		fputc(current,out);			
+		
+		*output_arr_p++ = current;
 
 		i++;
 	}
 
-	free(inputbuf);
+	i = 0;
 
+	output_arr_p = output_arr;
+
+	while ( i < in_size )
+	{
+		fputc(*output_arr_p,out);
+
+		output_arr_p++;
+
+		i++;
+	}
+
+	free(input_arr);
+	
+	free(output_arr);
 }
 
 int main(int argc,char*argv[])
