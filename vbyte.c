@@ -42,7 +42,9 @@ void encode_byte(FILE * in,FILE * out)
 		}					
 		
 		*output_arr_p++ = delta;
-
+		
+		previous = *input_arr_p++;
+		
 		i++;
 	}
 	
@@ -109,7 +111,7 @@ void decode_byte(FILE * in,FILE * out)
 			b = *inputbuf_p++;
 		}			
 
-		current =  current + (b << shift);
+		current += (b << shift);
 
 		fputc(current,out);			
 
@@ -117,6 +119,7 @@ void decode_byte(FILE * in,FILE * out)
 	}
 
 	free(inputbuf);
+
 }
 
 int main(int argc,char*argv[])
@@ -135,7 +138,7 @@ int main(int argc,char*argv[])
 
 	printf("%s\n",output_name);
 	
-	FILE * in = NULL, * out = NULL, *output = NULL;
+	FILE * in = NULL, * out = NULL, * decompressed_output = NULL;
 
 	if ( ( in = fopen(argv[1],"rb+") ) == NULL )			
 	{
@@ -147,9 +150,9 @@ int main(int argc,char*argv[])
 		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
 	}
 	
-	if ( ( output = fopen("decompressed_output.txt","wb+") ) == NULL )			
+	if ( ( decompressed_output = fopen("decompressed_output.txt","wb+") ) == NULL )			
 	{
-		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
+		fprintf(stderr,"Error: Failed to open file %s\n","decompressed_output_txt");
 	}
 	
 	encode_byte(in,out);
@@ -165,7 +168,7 @@ int main(int argc,char*argv[])
 	}
 		
 
-	decode_byte(out,output);		
+	decode_byte(out,decompressed_output);		
 
 	if ( fclose(in) == EOF )
 	{
@@ -177,7 +180,7 @@ int main(int argc,char*argv[])
 		fprintf(stderr,"Error: Failed to close %s\n",output_name);
 	}		
 
-	if ( fclose(output) == EOF )
+	if ( fclose(decompressed_output) == EOF )
 	{
 		fprintf(stderr,"Error: Failed to close %s\n","decompressed_output.txt");
 	}		
