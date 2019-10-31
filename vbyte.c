@@ -67,7 +67,6 @@ void encode_byte(FILE * in,FILE * out)
 
 	free(output_arr);	
 
-	rewind(out);
 }
 
 void decode_byte(FILE * in,FILE * out)
@@ -94,7 +93,7 @@ void decode_byte(FILE * in,FILE * out)
 	{
 		fprintf(stderr,"Error: Failed to read file into dynamically allocated array.");
 	}	
-	
+
 	unsigned char current = 0;
 	
 	unsigned char b = 0;
@@ -119,7 +118,7 @@ void decode_byte(FILE * in,FILE * out)
 		}			
 
 		current += (b << shift);
-		
+
 		*output_arr_p++ = current;
 
 		i++;
@@ -178,6 +177,8 @@ int main(int argc,char*argv[])
 	
 	encode_byte(in,out);
 
+	rewind(in);
+
 	if ( fclose(out) == EOF )
 	{
 		fprintf(stderr,"Error: Failed to close %s\n",output_name);
@@ -188,8 +189,11 @@ int main(int argc,char*argv[])
 		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
 	}
 		
-
 	decode_byte(out,decompressed_output);		
+
+	rewind(out);
+
+	rewind(decompressed_output);
 
 	if ( fclose(in) == EOF )
 	{
