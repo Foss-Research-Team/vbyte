@@ -34,7 +34,7 @@ void encode_byte(FILE * in,FILE * out)
 		while ( delta >= (0b1 << 7 ) )
 		{
 			*output_arr_p++ = (0b1 << 7) + ( delta & (0b01111111) );
-
+			
 			delta >>= 7;	
 
 			delta &= 0b00000001;
