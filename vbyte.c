@@ -66,6 +66,8 @@ void encode_byte(FILE * in,FILE * out)
 	free(input_arr);
 
 	free(output_arr);	
+
+	rewind(out);
 }
 
 void decode_byte(FILE * in,FILE * out)
@@ -75,7 +77,10 @@ void decode_byte(FILE * in,FILE * out)
 
 	const size_t in_size = ftell(in);
 	
-	static unsigned char * input_arr;
+	rewind(in);	
+	
+	unsigned char * input_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
+;
 
 	unsigned char * input_arr_p = input_arr;
 	
@@ -84,8 +89,6 @@ void decode_byte(FILE * in,FILE * out)
 	unsigned char * output_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
 	
 	unsigned char * output_arr_p = output_arr;
-	
-	rewind(in);	
 
 	if ( fread(input_arr,sizeof(unsigned char), in_size,in) <= 0 )
 	{
