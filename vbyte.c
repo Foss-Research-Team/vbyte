@@ -2,144 +2,59 @@
 #include <stdlib.h>
 #include <string.h>
 
-void encode_byte(FILE * in,FILE * out)
+void encode_vbyte(uint8_t * list, size_t list_size, FILE * out)
 {
-	fseek(in,0L,SEEK_END);
+	size_t element = 0, output_size = 0, i = 0;
+
+	uint8_t byte_chunk = 0, prev = 0, next_byte = 0, output_byte = 0;
 	
-	const size_t in_size = ftell(in);	
-		
-	rewind(in);
-
-	unsigned char * input_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
-
-	unsigned char * output_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
-
-	unsigned char * input_arr_p = input_arr;
-	
-	unsigned char * output_arr_p = output_arr;
-
-	if ( fread(input_arr,sizeof(unsigned char), in_size,in) <= 0 )
+	while ( i < list_size )
 	{
-		fprintf(stderr,"Error: Failed to read file into dynamically allocated array.");
-	}	
-	
-	unsigned char previous = 0, delta = 0;
-	
-	size_t i = 0;
-	
-	while ( i < in_size )
-	{
-		delta = *input_arr_p - previous;
-		
-		while ( delta >= (0b1 << 7 ) )
+		element = list[i];
+
+		byte_chunk = element & 0b01111111; // 7 ones
+
+		next_byte = (element >>= 7) & 0b01111111;
+
+		while ( next_byte > 0 )
 		{
-			*output_arr_p++ = (0b1 << 7) + ( delta & (0b01111111) );
-			
-			delta >>= 7;	
+			output_byte = byte_chunk | (0b1 << 7 );
 
-			delta &= 0b00000001;
+			fputc(output_byte,out);
 
-		}					
-		
-		*output_arr_p++ = delta;
-		
-		previous = *input_arr_p++;
-		
-		i++;
-	}
+			byte_chunk = next_byte;
+
+			next_byte = (element >>= 7) & 0b01111111;
+		}	
 	
-	// Writing to FILE * out
-
-	i = 0;
-
-	output_arr_p = output_arr;
-
-	while ( i < in_size )
-	{
-		fputc(*output_arr_p,out);
-		
-		output_arr_p++;		
+		fputc(byte_chunk,out);
 
 		i++;
 	}	
-	
-	free(input_arr);
-
-	free(output_arr);	
-
 }
 
-void decode_byte(FILE * in,FILE * out)
+
+void decode_byte(uint8_t * input,size_t * list,size_t list_size)
 {
+	size_t element = 0, shift = 0;
 
-	fseek(in,0L,SEEK_END);
+	uint8_t byte = 0;
 
-	const size_t in_size = ftell(in);
-	
-	rewind(in);	
-	
-	unsigned char * input_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
-;
-
-	unsigned char * input_arr_p = input_arr;
-	
-	input_arr_p = (unsigned char *)calloc(in_size,sizeof(unsigned char));
-
-	unsigned char * output_arr = (unsigned char *)calloc(in_size,sizeof(unsigned char));
-	
-	unsigned char * output_arr_p = output_arr;
-
-	if ( fread(input_arr,sizeof(unsigned char), in_size,in) <= 0 )
+	while (*input != 0x0)
 	{
-		fprintf(stderr,"Error: Failed to read file into dynamically allocated array.");
-	}	
-
-	unsigned char current = 0;
-	
-	unsigned char b = 0;
-
-	size_t i = 0;
-
-	size_t shift = 0;
-
-	while ( i < in_size )
-	{
-		shift = 0;
-
-		b = *input_arr_p++;
-
-		while ( b >= (0b1 << 7) )
+		while ( *input &(0b1<<7) == (0b1 << 7) )
 		{
-			current = current + ( ( b & 0b01111111 ) << shift ); 	
+			element |= ((*input) << shift);
 
 			shift += 7;
 
-			b = *input_arr_p++;
-		}			
+			input++;
+		}
 
-		current += (b << shift);
-
-		*output_arr_p++ = current;
-
-		i++;
+		*list++ = element; shift = 0; element = 0;
 	}
 
-	i = 0;
 
-	output_arr_p = output_arr;
-
-	while ( i < in_size )
-	{
-		fputc(*output_arr_p,out);
-
-		output_arr_p++;
-
-		i++;
-	}
-
-	free(input_arr);
-	
-	free(output_arr);
 }
 
 int main(int argc,char*argv[])
@@ -158,42 +73,66 @@ int main(int argc,char*argv[])
 
 	printf("%s\n",output_name);
 	
-	FILE * in = NULL, * out = NULL, * decompressed_output = NULL;
+	FILE * in = NULL, * out = NULL;
+
+	uint8_t * output = NULL; size_t output_size = 0;
+
+	uint8_t * input_list = NULL; size_t input_size = 0;	
 
 	if ( ( in = fopen(argv[1],"rb+") ) == NULL )			
 	{
 		fprintf(stderr,"Error: Failed to open file %s\n",argv[1]);
+
+		exit(1);
 	}
+
+	fseek(in,0L,SEEK_END);
+
+	input_size = ftell(in);
+
+	rewind(in);
 		
 	if ( ( out = fopen(output_name,"wb+") ) == NULL )			
 	{
 		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
+
+		exit(1);
 	}
+
+	input_list = (uint8_t *)calloc(input_size,sizeof(size_t));
 	
-	if ( ( decompressed_output = fopen("decompressed_output.txt","wb+") ) == NULL )			
+	if ( fread(input_list,1,input_size,in) < input_size )
 	{
-		fprintf(stderr,"Error: Failed to open file %s\n","decompressed_output_txt");
-	}
+		fprintf(stderr,"Error: Failed to read FILE in into input_list\n");
+
+		exit(1);
+	}	
 	
-	encode_byte(in,out);
+	encode_vbyte(input_list,input_size,out);
 
 	rewind(in);
-
-	if ( fclose(out) == EOF )
-	{
-		fprintf(stderr,"Error: Failed to close %s\n",output_name);
-	}		
 	
-	if ( ( out = fopen(output_name,"rb+") ) == NULL )			
-	{
-		fprintf(stderr,"Error: Failed to open file %s\n",output_name);
-	}
-		
-	decode_byte(out,decompressed_output);		
+	free(input_list);
+
+	fseek(out,0L,SEEK_END);
+	
+	output_size = ftell(out);
 
 	rewind(out);
 
-	rewind(decompressed_output);
+	output = (uint8_t *)calloc(output_size,sizeof(uint8_t));
+	
+	if ( fread(output,1,output_size,out) < output_size )
+	{
+		fprintf(stderr,"Error: Failed to read encoded file into output array\n");
+		exit(1);
+	}
+#if 0	
+	output_list = (size_t *)calloc(input_size,sizeof(size_t));
+		
+	decode_byte(output,output_list,input_size);		
+#endif
+	rewind(out);
 
 	if ( fclose(in) == EOF )
 	{
@@ -205,10 +144,8 @@ int main(int argc,char*argv[])
 		fprintf(stderr,"Error: Failed to close %s\n",output_name);
 	}		
 
-	if ( fclose(decompressed_output) == EOF )
-	{
-		fprintf(stderr,"Error: Failed to close %s\n","decompressed_output.txt");
-	}		
-	
+
+	free(output);
+
 	return 0;
 }
